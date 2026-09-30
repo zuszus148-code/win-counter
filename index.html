@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WIN Counter</title>
+<style>
+:root{--p:#9b5cff;--p2:#6d28d9;--bg:#0d0817;--card:#171022;--line:#35204d;--text:#fff;--muted:#a99bb8}
+*{box-sizing:border-box}body{margin:0;background:transparent;color:var(--text);font-family:Inter,Arial,sans-serif}
+.wrap{min-height:100vh;display:grid;place-items:center;padding:20px}
+.card{width:min(460px,100%);background:linear-gradient(145deg,rgba(25,15,38,.97),rgba(13,8,23,.97));border:1px solid #4c2870;border-radius:24px;padding:28px;box-shadow:0 20px 70px rgba(0,0,0,.45),0 0 35px rgba(155,92,255,.12)}
+h1{margin:0;text-align:center;font-size:18px;letter-spacing:4px;color:#c9a7ff}
+.counter{text-align:center;font-size:72px;font-weight:900;line-height:1;margin:22px 0}
+.counter .slash{color:#705781;font-size:.65em}.counter .goal{color:#d9c8eb}
+.progress{height:10px;background:#2a1b36;border-radius:99px;overflow:hidden;margin:0 0 24px}
+.bar{height:100%;width:0;background:linear-gradient(90deg,var(--p2),#c084fc);border-radius:99px;transition:width .18s}
+.buttons{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+button{border:0;border-radius:14px;height:56px;font-size:28px;font-weight:900;color:white;cursor:pointer;transition:.12s}
+button:active{transform:scale(.97)}.minus{background:#2b2035}.plus{background:linear-gradient(135deg,#7c3aed,#a855f7);box-shadow:0 8px 25px rgba(124,58,237,.25)}
+.row{display:flex;gap:8px;margin-top:12px}.row input{flex:1;min-width:0}
+input{height:44px;background:#100b18;border:1px solid #49325a;border-radius:11px;color:white;padding:0 12px;text-align:center;font-size:16px;outline:none}
+input:focus{border-color:#a66cff;box-shadow:0 0 0 3px rgba(166,108,255,.12)}
+.small{font-size:12px;color:var(--muted);text-align:center;margin-top:18px}
+.secondary{background:#251a30;font-size:14px;height:44px;padding:0 16px}
+.status{text-align:center;min-height:20px;margin-top:14px;font-size:13px;color:#bda8ca}
+.complete{color:#d8b4ff;font-weight:800}
+@media(max-width:500px){.counter{font-size:56px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+<h1>WIN COUNTER</h1>
+<div class="counter"><span id="wins">0</span> <span class="slash">/</span> <span class="goal" id="goal">10</span></div>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<div class="buttons">
+<button class="minus" id="minus">−</button>
+<button class="plus" id="plus">+</button>
+</div>
+<div class="row">
+<input id="goalInput" type="number" step="1" placeholder="เป้าหมาย เช่น 10">
+<button class="secondary" id="setGoal">ตั้งเป้า</button>
+</div>
+<div class="row">
+<button class="secondary" id="reset">รีเซ็ต WIN</button>
+<button class="secondary" id="zero">ตั้งเป็น 0</button>
+</div>
+<div class="status" id="status"></div>
+<div class="small">หน้านี้คือ CONTROL • ใช้ URL /?mode=overlay สำหรับหน้าไลฟ์</div>
+</div>
+</div>
+<script>
+(() => {
+  const KEY="win_counter_state_v2";
+  const CHANNEL="win_counter_channel_v2";
+  const bc = "BroadcastChannel" in window ? new BroadcastChannel(CHANNEL) : null;
+  const $=id=>document.getElementById(id);
+  let state={wins:0,goal:10};
+
+  function load(){
+    try{
+      const saved=JSON.parse(localStorage.getItem(KEY));
+      if(saved && Number.isFinite(Number(saved.wins)) && Number.isFinite(Number(saved.goal)) && Number(saved.goal)>0){
+        state={wins:Number(saved.wins),goal:Number(saved.goal)};
+      }
+    }catch(e){}
+  }
+  function save(){
+    localStorage.setItem(KEY,JSON.stringify(state));
+    if(bc) bc.postMessage({type:"state",state});
+    render();
+  }
+  function render(){
+    $("wins").textContent=String(state.wins);
+    $("goal").textContent=String(state.goal);
+    const pct=Math.max(0,Math.min(100,(state.wins/state.goal)*100));
+    $("bar").style.width=pct+"%";
+    $("status").innerHTML=state.wins>=state.goal
+      ? '<span class="complete">WIN COMPLETE!</span>'
+      : "กำลังใช้งาน • Overlay จะอัปเดตทันที";
+  }
+  $("plus").onclick=()=>{state.wins+=1;save()};
+  $("minus").onclick=()=>{state.wins-=1;save()}; // ติดลบได้
+  $("reset").onclick=()=>{state.wins=0;save()};
+  $("zero").onclick=()=>{state.wins=0;save()};
+  $("setGoal").onclick=()=>{
+    const n=Number($("goalInput").value);
+    if(!Number.isInteger(n)||n<=0){$("status").textContent="เป้าหมายต้องเป็นจำนวนเต็มมากกว่า 0";return}
+    state.goal=n;$("goalInput").value="";save();
+  };
+  $("goalInput").addEventListener("keydown",e=>{if(e.key==="Enter")$("setGoal").click()});
+  load();render();
+})();
+</script>
+</body>
+</html>
